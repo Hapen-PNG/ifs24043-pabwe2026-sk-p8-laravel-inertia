@@ -15,42 +15,24 @@ class PostFactory extends Factory
 {
     protected $model = Post::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
-        $title = fake()->sentence(5);
-        $category = fake()->randomElement(PostCategory::values());
+        $title = fake()->unique()->sentence(5);
 
         return [
             'user_id' => User::factory(),
             'title' => $title,
-            'slug' => Str::slug($title).'-'.fake()->unique()->numberBetween(1000, 99999),
-            'category' => $category,
-            'excerpt' => fake()->paragraph(2),
-            'content' => fake()->paragraphs(4, true),
-            'cover_image_path' => null,
+            'slug' => Str::slug($title).'-'.fake()->unique()->numberBetween(1000, 999999),
+            'category' => fake()->randomElement(PostCategory::values()),
+            'excerpt' => fake()->sentence(12),
+            'content' => "## ".fake()->sentence(3)."\n\n".fake()->paragraph(4),
             'is_published' => true,
             'published_at' => now(),
         ];
     }
 
-    public function published(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_published' => true,
-            'published_at' => now(),
-        ]);
-    }
-
     public function draft(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'is_published' => false,
-            'published_at' => null,
-        ]);
+        return $this->state(fn () => ['is_published' => false, 'published_at' => null]);
     }
 }

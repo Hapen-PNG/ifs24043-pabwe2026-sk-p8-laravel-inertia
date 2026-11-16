@@ -4,41 +4,37 @@ namespace App\Features\Post\Enums;
 
 enum PostCategory: string
 {
-    case TEKNOLOGI = 'Teknologi';
-    case PENDIDIKAN = 'Pendidikan';
-    case GAYA_HIDUP = 'Gaya Hidup';
-    case BISNIS = 'Bisnis';
-    case OPINI = 'Opini';
-    case UMUM = 'Umum';
+    case Teknologi = 'Teknologi';
+    case Pendidikan = 'Pendidikan';
+    case GayaHidup = 'Gaya Hidup';
+    case Bisnis = 'Bisnis';
+    case Opini = 'Opini';
+    case Umum = 'Umum';
 
     public function label(): string
     {
         return match ($this) {
-            self::TEKNOLOGI => 'Teknologi & Koding',
-            self::PENDIDIKAN => 'Pendidikan & Tutorial',
-            self::GAYA_HIDUP => 'Gaya Hidup & Produktivitas',
-            self::BISNIS => 'Bisnis & Karir',
-            self::OPINI => 'Opini & Pemikiran',
-            self::UMUM => 'Umum',
+            self::Teknologi => 'Teknologi & Koding',
+            self::Pendidikan => 'Pendidikan & Tutorial',
+            self::GayaHidup => 'Gaya Hidup & Produktivitas',
+            self::Bisnis => 'Bisnis & Karir',
+            self::Opini => 'Opini & Pemikiran',
+            self::Umum => 'Umum',
         };
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     public static function values(): array
     {
-        return array_column(self::cases(), 'value');
+        return array_map(fn (self $case) => $case->value, self::cases());
     }
 
-    /**
-     * @return list<array{value: string, label: string}>
-     */
+    /** @return list<array{value: string, label: string}> */
     public static function options(): array
     {
-        return array_map(fn (self $category) => [
-            'value' => $category->value,
-            'label' => $category->label(),
-        ], self::cases());
+        return array_map(
+            fn (self $case) => ['value' => $case->value, 'label' => $case->label()],
+            self::cases()
+        );
     }
 }

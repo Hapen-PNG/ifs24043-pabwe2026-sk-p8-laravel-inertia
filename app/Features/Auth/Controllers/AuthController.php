@@ -8,91 +8,62 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AuthController extends Controller
 {
-    public function createLogin(): Response
+    public function showLogin(): Response
     {
         return Inertia::render('Auth/Login');
     }
 
-    public function storeLogin(Request $request, LoginUserAction $action): RedirectResponse
+    public function login(Request $request, LoginUserAction $action): RedirectResponse
     {
-        $loginValue = $request->input('login') 
-            ?? $request->input('username') 
-            ?? $request->input('email');
-
-        $request->merge(['login' => $loginValue]);
-
-        $request->validate([
-            'login' => ['required', 'string'],
+        $credentials = $request->validate([
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
-            'remember' => ['nullable', 'boolean'],
-        ], [
-            'login.required' => 'Username atau email wajib diisi.',
-            'password.required' => 'Password wajib diisi.',
         ]);
 
-        $success = $action->execute(
-            login: (string) $loginValue,
-            password: (string) $request->input('password'),
-            remember: (bool) $request->boolean('remember')
+        if (! $action->execute($credentials['username'], $credentials['password'], $request->boolean('remember'))) {
+            return back()
+                ->withErrors(['username' => 'Username atau password salah.'])
+                ->onlyInput('username');
+        }
+
+        $request->session()->regenerate();
+
+        return redirect()->intended(
+            $request->user()->isAdmin() ? route('admin.users.index') : route('dashboard.posts.index')
         );
-
-        if (! $success) {
-            throw ValidationException::withMessages([
-                'login' => ['Kredensial yang diberikan tidak cocok dengan data kami.'],
-                'username' => ['Kredensial yang diberikan tidak cocok dengan data kami.'],
-            ]);
-        }
-
-        $user = Auth::user();
-        if ($user && $user->isAdmin()) {
-            return redirect()->intended('/admin/posts');
-        }
-
-        return redirect()->intended('/dashboard/posts');
     }
 
-    public function createRegister(): Response
+    public function showRegister(): Response
     {
         return Inertia::render('Auth/Register');
     }
 
-    public function storeRegister(Request $request, RegisterUserAction $action): RedirectResponse
+    public function register(Request $request, RegisterUserAction $action): RedirectResponse
     {
-        $validated = $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'min:3', 'max:50', 'alpha_dash', 'unique:users,username'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'username' => ['required', 'string', 'alpha_dash', 'min:3', 'max:50', 'unique:users,username'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
-        ], [
-            'name.required' => 'Nama lengkap wajib diisi.',
-            'username.required' => 'Username wajib diisi.',
-            'username.unique' => 'Username sudah digunakan oleh akun lain.',
-            'email.required' => 'Email wajib diisi.',
-            'email.unique' => 'Email sudah terdaftar di sistem.',
-            'password.required' => 'Password wajib diisi.',
-            'password.min' => 'Password minimal terdiri dari 6 karakter.',
-            'password.confirmed' => 'Konfirmasi password tidak cocok.',
         ]);
 
-        $user = $action->execute($validated);
-        Auth::login($user);
+        Auth::login($action->execute($data));
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard.posts.index')->with('success', 'Selamat datang! Akun penulis Anda berhasil didaftarkan.');
+        return redirect()->route('dashboard.posts.index')->with('success', 'Akun berhasil dibuat. Selamat menulis!');
     }
 
-    public function destroy(Request $request): RedirectResponse
+    public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('public.home')->with('success', 'Anda telah berhasil keluar.');
+        return redirect('/');
     }
 }

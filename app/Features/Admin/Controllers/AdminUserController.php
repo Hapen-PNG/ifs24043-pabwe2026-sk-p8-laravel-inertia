@@ -14,72 +14,24 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminUserController extends Controller
 {
-    public function __construct(
-        protected AdminUserService $adminUserService,
-        protected PostRepositoryInterface $postRepository,
-        protected PostExcelService $excelService
-    ) {}
-
-    public function index(Request $request): Response
+    public function index(Request $request, AdminUserService $service): Response
     {
-        $search = $request->query('search');
-        $role = $request->query('role');
-
-        $users = $this->adminUserService->getAllUsers(
-            search: $search ? (string) $search : null,
-            role: $role ? (string) $role : null
-        );
-
         return Inertia::render('Admin/UserList', [
-            'users' => $users,
-            'filters' => [
-                'search' => $search ?? '',
-                'role' => $role ?? 'Semua',
-            ],
+            'users' => $service->paginate($request->query('search')),
+            'filters' => ['search' => $request->query('search', '')],
         ]);
     }
 
-    public function userPosts(Request $request, User $user): Response
+    public function posts(User $user, PostRepositoryInterface $posts): Response
     {
-        $search = $request->query('search');
-        $category = $request->query('category');
-        $status = $request->query('status');
-
-        $posts = $this->postRepository->getUserPosts(
-            userId: $user->id,
-            search: $search ? (string) $search : null,
-            category: $category ? (string) $category : null,
-            status: $status ? (string) $status : null
-        );
-
-        $stats = $this->postRepository->getUserStats($user->id);
-
         return Inertia::render('Admin/UserPostList', [
-            'author' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'username' => $user->username,
-                'email' => $user->email,
-                'role' => $user->role,
-                'profile_photo_url' => $user->profile_photo_path
-                    ? asset('storage/'.$user->profile_photo_path)
-                    : null,
-            ],
-            'posts' => $posts,
-            'stats' => $stats,
-            'filters' => [
-                'search' => $search ?? '',
-                'category' => $category ?? 'Semua',
-                'status' => $status ?? 'all',
-            ],
+            'owner' => $user->only(['id', 'name', 'username']),
+            'posts' => $posts->paginateForUser($user->id, null),
         ]);
     }
 
-    public function exportUserPosts(User $user): StreamedResponse
+    public function exportPosts(User $user, PostRepositoryInterface $posts, PostExcelService $excel): StreamedResponse
     {
-        $posts = $this->postRepository->getAllUserPostsForExport($user->id);
-        $filename = 'artikel-'.strtolower($user->username).'-'.date('YmdHis').'.xlsx';
-
-        return $this->excelService->export($posts, $filename);
+        return $excel->download($posts->allForUser($user->id), "artikel-{$user->username}.xlsx");
     }
 }

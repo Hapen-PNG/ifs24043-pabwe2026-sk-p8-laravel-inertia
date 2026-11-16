@@ -2,31 +2,30 @@
 
 namespace App\Features\Ai\DTO;
 
-class GeneratedPostItem
+use App\Features\Post\Enums\PostCategory;
+
+final class GeneratedPostItem
 {
     public function __construct(
-        public string $title,
-        public string $category,
-        public ?string $excerpt,
-        public string $content
+        public readonly string $title,
+        public readonly string $category,
+        public readonly string $excerpt,
+        public readonly string $content,
     ) {}
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public static function fromArray(array $data): self
     {
+        $category = PostCategory::tryFrom((string) ($data['category'] ?? ''))?->value ?? PostCategory::Umum->value;
+
         return new self(
-            title: (string) ($data['title'] ?? ''),
-            category: (string) ($data['category'] ?? 'Umum'),
-            excerpt: isset($data['excerpt']) ? (string) $data['excerpt'] : null,
-            content: (string) ($data['content'] ?? '')
+            title: trim((string) ($data['title'] ?? 'Artikel Tanpa Judul')),
+            category: $category,
+            excerpt: trim((string) ($data['excerpt'] ?? '')),
+            content: trim((string) ($data['content'] ?? '')),
         );
     }
 
-    /**
-     * @return array{title: string, category: string, excerpt: ?string, content: string}
-     */
+    /** @return array{title: string, category: string, excerpt: string, content: string} */
     public function toArray(): array
     {
         return [

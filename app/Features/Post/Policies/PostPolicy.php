@@ -7,28 +7,9 @@ use App\Models\User;
 
 class PostPolicy
 {
-    public function viewAny(User $user): bool
+    /** Penulis hanya boleh mengelola artikel miliknya sendiri. */
+    public function manage(User $user, Post $post): bool
     {
-        return true;
-    }
-
-    public function view(User $user, Post $post): bool
-    {
-        return $user->isAdmin() || $post->user_id === $user->id;
-    }
-
-    public function create(User $user): bool
-    {
-        return true;
-    }
-
-    public function update(User $user, Post $post): bool
-    {
-        return $post->user_id === $user->id;
-    }
-
-    public function delete(User $user, Post $post): bool
-    {
-        return $post->user_id === $user->id;
+        return $user->id === $post->user_id;
     }
 }

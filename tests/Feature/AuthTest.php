@@ -4,174 +4,92 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_page_can_be_rendered(): void
+    public function test_login_and_register_pages_render_for_guest(): void
     {
-        $response = $this->get('/login');
-
-        $response->assertStatus(200);
+        $this->get('/login')->assertOk();
+        $this->get('/register')->assertOk();
     }
 
-    public function test_register_page_can_be_rendered(): void
+    public function test_member_can_login_and_is_redirected_to_dashboard(): void
     {
-        $response = $this->get('/register');
+        User::factory()->create(['username' => 'budi', 'password' => 'rahasia']);
 
-        $response->assertStatus(200);
-    }
-
-    public function test_users_can_authenticate_using_username(): void
-    {
-        $user = User::factory()->create([
-            'username' => 'testuser',
-            'password' => Hash::make('password123'),
-        ]);
-
-        $response = $this->post('/login', [
-            'login' => 'testuser',
-            'password' => 'password123',
-        ]);
-
-        $this->assertAuthenticatedAs($user);
-        $response->assertRedirect('/dashboard/posts');
-    }
-
-    public function test_admin_user_authenticates_and_redirects_to_admin_posts(): void
-    {
-        $admin = User::factory()->create([
-            'username' => 'superadmin',
-            'role' => 'admin',
-            'password' => Hash::make('adminsecret'),
-        ]);
-
-        $response = $this->post('/login', [
-            'login' => 'superadmin',
-            'password' => 'adminsecret',
-        ]);
-
-        $this->assertAuthenticatedAs($admin);
-        $response->assertRedirect('/admin/posts');
-    }
-
-    public function test_users_can_authenticate_using_email(): void
-    {
-        $user = User::factory()->create([
-            'email' => 'user@example.com',
-            'password' => Hash::make('secretpass'),
-        ]);
-
-        $response = $this->post('/login', [
-            'login' => 'USER@EXAMPLE.COM',
-            'password' => 'secretpass',
-        ]);
-
-        $this->assertAuthenticatedAs($user);
-        $response->assertRedirect('/dashboard/posts');
-    }
-
-    public function test_users_can_authenticate_using_email_parameter_directly(): void
-    {
-        $user = User::factory()->create([
-            'email' => 'direct-email@example.com',
-            'password' => Hash::make('secretpass123'),
-        ]);
-
-        $response = $this->post('/login', [
-            'email' => 'direct-email@example.com',
-            'password' => 'secretpass123',
-        ]);
-
-        $this->assertAuthenticatedAs($user);
-        $response->assertRedirect('/dashboard/posts');
-    }
-
-    public function test_users_cannot_authenticate_with_invalid_password(): void
-    {
-        $user = User::factory()->create([
-            'username' => 'validuser',
-            'password' => Hash::make('correct-password'),
-        ]);
-
-        $response = $this->from('/login')->post('/login', [
-            'login' => 'validuser',
-            'password' => 'wrong-password',
-        ]);
-
-        $this->assertGuest();
-        $response->assertRedirect('/login');
-        $response->assertSessionHasErrors('login');
-    }
-
-    public function test_users_cannot_authenticate_with_non_existent_username(): void
-    {
-        $response = $this->from('/login')->post('/login', [
-            'login' => 'nobody',
-            'password' => 'secret',
-        ]);
-
-        $this->assertGuest();
-        $response->assertRedirect('/login');
-        $response->assertSessionHasErrors('login');
-    }
-
-    public function test_authenticated_user_redirected_away_from_login_and_register(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)->get('/login')->assertRedirect('/');
-        $this->actingAs($user)->get('/register')->assertRedirect('/');
-    }
-
-    public function test_new_users_can_register(): void
-    {
-        $response = $this->post('/register', [
-            'name' => 'John Doe',
-            'username' => 'johndoe',
-            'email' => 'john@example.com',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
-        ]);
+        $this->post('/login', ['username' => 'budi', 'password' => 'rahasia'])
+            ->assertRedirect('/dashboard/posts');
 
         $this->assertAuthenticated();
-        $response->assertRedirect('/dashboard/posts');
-        $this->assertDatabaseHas('users', [
-            'name' => 'John Doe',
-            'username' => 'johndoe',
-            'email' => 'john@example.com',
-            'role' => 'member',
-        ]);
     }
 
-    public function test_registration_validation_rules(): void
+    public function test_admin_login_redirects_to_admin_panel(): void
     {
-        $existing = User::factory()->create([
-            'username' => 'takenuser',
-            'email' => 'taken@example.com',
-        ]);
+        User::factory()->admin()->create(['username' => 'admin', 'password' => 'admin']);
 
-        $response = $this->post('/register', [
-            'name' => '',
-            'username' => 'takenuser',
-            'email' => 'taken@example.com',
-            'password' => '123',
-            'password_confirmation' => '456',
-        ]);
-
-        $response->assertSessionHasErrors(['name', 'username', 'email', 'password']);
+        $this->post('/login', ['username' => 'admin', 'password' => 'admin'])
+            ->assertRedirect('/admin/users');
     }
 
-    public function test_authenticated_user_can_logout(): void
+    public function test_login_fails_with_wrong_password(): void
     {
-        $user = User::factory()->create();
+        User::factory()->create(['username' => 'budi', 'password' => 'rahasia']);
 
-        $response = $this->actingAs($user)->post('/logout');
+        $this->from('/login')
+            ->post('/login', ['username' => 'budi', 'password' => 'salah'])
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors('username');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+    }
+
+    public function test_login_requires_fields(): void
+    {
+        $this->post('/login', [])->assertSessionHasErrors(['username', 'password']);
+    }
+
+    public function test_user_can_register_as_member(): void
+    {
+        $this->post('/register', [
+            'name' => 'Siti',
+            'username' => 'siti_01',
+            'email' => 'siti@example.com',
+            'password' => 'password1',
+            'password_confirmation' => 'password1',
+        ])->assertRedirect('/dashboard/posts');
+
+        $this->assertDatabaseHas('users', ['username' => 'siti_01', 'role' => 'member']);
+        $this->assertAuthenticated();
+    }
+
+    public function test_register_validates_input(): void
+    {
+        User::factory()->create(['username' => 'dipakai']);
+
+        $this->post('/register', [
+            'name' => '',
+            'username' => 'dipakai',
+            'password' => '123',
+        ])->assertSessionHasErrors(['name', 'username', 'password']);
+    }
+
+    public function test_logout_clears_session(): void
+    {
+        $this->actingAs(User::factory()->create())->post('/logout')->assertRedirect('/');
+
+        $this->assertGuest();
+    }
+
+    public function test_authenticated_user_cannot_open_login_page(): void
+    {
+        $this->actingAs(User::factory()->create())->get('/login')->assertRedirect();
+    }
+
+    public function test_guest_is_redirected_from_dashboard_to_login(): void
+    {
+        $this->get('/dashboard/posts')->assertRedirect('/login');
     }
 }

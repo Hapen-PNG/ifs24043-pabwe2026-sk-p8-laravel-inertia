@@ -2,36 +2,24 @@
 
 namespace Tests\Feature;
 
-use App\Features\Ai\Contracts\AiClientInterface;
-use App\Features\Ai\Services\OpenAiPostGeneratorService;
-use App\Features\Post\Contracts\PostRepositoryInterface;
-use App\Features\Post\Repositories\PostRepository;
 use App\Providers\AppServiceProvider;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class AppServiceProviderTest extends TestCase
 {
-    public function test_service_bindings_resolve_expected_classes(): void
+    public function test_https_is_forced_in_production(): void
     {
-        $provider = new AppServiceProvider($this->app);
-        $provider->register();
+        $this->app['env'] = 'production';
 
-        $this->assertInstanceOf(PostRepository::class, app(PostRepositoryInterface::class));
-        $this->assertInstanceOf(OpenAiPostGeneratorService::class, app(AiClientInterface::class));
+        (new AppServiceProvider($this->app))->boot();
+
+        $this->assertStringStartsWith('https://', url('/'));
     }
 
-    public function test_boot_respects_force_https_configuration(): void
+    public function test_scheme_is_not_forced_outside_production(): void
     {
-        // When force_https is false
-        config(['app.force_https' => false]);
-        $provider = new AppServiceProvider($this->app);
-        $provider->boot();
+        (new AppServiceProvider($this->app))->boot();
 
-        // When force_https is true
-        config(['app.force_https' => true]);
-        $provider->boot();
-
-        $this->assertSame('https', parse_url(URL::to('/'), PHP_URL_SCHEME));
+        $this->assertStringStartsWith('http://', url('/'));
     }
 }

@@ -7,40 +7,15 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that's loaded on the first page visit.
-     *
-     * @see https://inertiajs.com/server-side-setup#root-template
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
-     */
-    public function version(Request $request): ?string
-    {
-        return parent::version($request);
-    }
-
-    /**
-     * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
         $user = $request->user();
 
         return [
             ...parent::share($request),
-            'appName' => config('app.name', 'BlogVerse Pro'),
-            'csrf_token' => fn () => $request->hasSession() ? $request->session()->token() : csrf_token(),
+            'appName' => config('app.name'),
             'auth' => [
                 'user' => $user ? [
                     'id' => $user->id,
@@ -48,14 +23,13 @@ class HandleInertiaRequests extends Middleware
                     'username' => $user->username,
                     'email' => $user->email,
                     'role' => $user->role,
-                    'profile_photo_url' => $user->profile_photo_path
-                        ? asset('storage/'.$user->profile_photo_path)
-                        : null,
+                    'profile_photo_url' => $user->profile_photo_url,
                 ] : null,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                'generated' => fn () => $request->session()->get('generated'),
             ],
         ];
     }

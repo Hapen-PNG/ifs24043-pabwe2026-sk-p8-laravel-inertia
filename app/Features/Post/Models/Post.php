@@ -6,7 +6,6 @@ use App\Features\Post\Enums\PostCategory;
 use App\Models\User;
 use Database\Factories\PostFactory;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,12 +13,8 @@ use Illuminate\Support\Facades\Storage;
 
 class Post extends Model
 {
+    /** @use HasFactory<PostFactory> */
     use HasFactory;
-
-    protected static function newFactory(): PostFactory
-    {
-        return PostFactory::new();
-    }
 
     protected $fillable = [
         'user_id',
@@ -33,19 +28,19 @@ class Post extends Model
         'published_at',
     ];
 
-    protected $appends = [
-        'cover_url',
-    ];
+    protected $appends = ['cover_url'];
 
-    /**
-     * @return array<string, string>
-     */
+    protected static function newFactory(): PostFactory
+    {
+        return PostFactory::new();
+    }
+
     protected function casts(): array
     {
         return [
+            'category' => PostCategory::class,
             'is_published' => 'boolean',
             'published_at' => 'datetime',
-            'category' => PostCategory::class,
         ];
     }
 
@@ -59,16 +54,10 @@ class Post extends Model
         return $query->where('is_published', true);
     }
 
-    protected function coverUrl(): Attribute
+    public function getCoverUrlAttribute(): ?string
     {
-        return Attribute::make(
-            get: function () {
-                if (! $this->cover_image_path) {
-                    return null;
-                }
-
-                return Storage::disk('public')->url($this->cover_image_path);
-            }
-        );
+        return $this->cover_image_path
+            ? Storage::disk('public')->url($this->cover_image_path)
+            : null;
     }
 }

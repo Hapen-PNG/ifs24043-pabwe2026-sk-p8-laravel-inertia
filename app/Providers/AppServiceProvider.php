@@ -9,26 +9,21 @@ use App\Features\Post\Models\Post;
 use App\Features\Post\Policies\PostPolicy;
 use App\Features\Post\Repositories\PostRepository;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\URL; // TAMBAHAN: Import URL
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $this->app->bind(PostRepositoryInterface::class, PostRepository::class);
         $this->app->bind(AiClientInterface::class, OpenAiPostGeneratorService::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        if (config('app.force_https', false)) {
+        // TAMBAHAN: Paksa HTTPS hanya saat di server production (Render)
+        if (app()->environment('production')) {
             URL::forceScheme('https');
         }
 
