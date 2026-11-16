@@ -7,7 +7,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -28,3 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
+
+$app->useStoragePath('/tmp/storage');
+
+if (! is_dir('/tmp/storage') && ! mkdir('/tmp/storage', 0775, true) && ! is_dir('/tmp/storage')) {
+    throw new RuntimeException('Unable to create the writable storage directory at /tmp/storage.');
+}
+
+return $app;
