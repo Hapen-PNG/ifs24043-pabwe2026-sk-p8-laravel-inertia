@@ -33,9 +33,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(
-            $request->user()->isAdmin() ? route('admin.users.index') : route('dashboard.posts.index')
-        );
+        return redirect()->route('dashboard');
     }
 
     public function showRegister(): Response

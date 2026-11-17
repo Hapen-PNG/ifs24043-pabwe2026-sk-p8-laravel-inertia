@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -21,17 +22,25 @@ class AuthTest extends TestCase
         User::factory()->create(['username' => 'budi', 'password' => 'rahasia']);
 
         $this->post('/login', ['username' => 'budi', 'password' => 'rahasia'])
-            ->assertRedirect('/dashboard/posts');
+            ->assertRedirect('/dashboard');
 
         $this->assertAuthenticated();
     }
 
-    public function test_admin_login_redirects_to_admin_panel(): void
+    public function test_admin_login_redirects_to_dashboard(): void
     {
         User::factory()->admin()->create(['username' => 'admin', 'password' => 'admin']);
 
         $this->post('/login', ['username' => 'admin', 'password' => 'admin'])
-            ->assertRedirect('/admin/users');
+            ->assertRedirect('/dashboard');
+    }
+
+    public function test_authenticated_user_can_open_dashboard(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Dashboard/Index'));
     }
 
     public function test_login_fails_with_wrong_password(): void
@@ -90,6 +99,7 @@ class AuthTest extends TestCase
 
     public function test_guest_is_redirected_from_dashboard_to_login(): void
     {
+        $this->get('/dashboard')->assertRedirect('/login');
         $this->get('/dashboard/posts')->assertRedirect('/login');
     }
 }
