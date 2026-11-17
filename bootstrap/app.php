@@ -7,14 +7,18 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+$isVercel = filter_var(env('VERCEL', false), FILTER_VALIDATE_BOOLEAN);
+
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
+    ->withMiddleware(function (Middleware $middleware) use ($isVercel): void {
+        if ($isVercel) {
+            $middleware->trustProxies(at: '*');
+        }
 
         $middleware->web(append: [
             HandleInertiaRequests::class,
@@ -29,22 +33,24 @@ $app = Application::configure(basePath: dirname(__DIR__))
         //
     })->create();
 
-$app->useStoragePath('/tmp/storage');
-$app->useBootstrapPath('/tmp/bootstrap');
+if ($isVercel) {
+    $app->useStoragePath('/tmp/storage');
+    $app->useBootstrapPath('/tmp/bootstrap');
 
-foreach ([
-    '/tmp/bootstrap/cache',
-    '/tmp/storage/app/private',
-    '/tmp/storage/app/public',
-    '/tmp/storage/framework/cache/data',
-    '/tmp/storage/framework/cache/locks',
-    '/tmp/storage/framework/sessions',
-    '/tmp/storage/framework/testing',
-    '/tmp/storage/framework/views',
-    '/tmp/storage/logs',
-] as $directory) {
-    if (! is_dir($directory) && ! mkdir($directory, 0775, true) && ! is_dir($directory)) {
-        throw new RuntimeException("Unable to create the writable storage directory at {$directory}.");
+    foreach ([
+        '/tmp/bootstrap/cache',
+        '/tmp/storage/app/private',
+        '/tmp/storage/app/public',
+        '/tmp/storage/framework/cache/data',
+        '/tmp/storage/framework/cache/locks',
+        '/tmp/storage/framework/sessions',
+        '/tmp/storage/framework/testing',
+        '/tmp/storage/framework/views',
+        '/tmp/storage/logs',
+    ] as $directory) {
+        if (! is_dir($directory) && ! mkdir($directory, 0775, true) && ! is_dir($directory)) {
+            throw new RuntimeException("Unable to create the writable storage directory at {$directory}.");
+        }
     }
 }
 

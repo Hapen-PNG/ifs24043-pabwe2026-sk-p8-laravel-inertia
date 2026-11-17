@@ -43,7 +43,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (app()->environment('production')) {
+        if (
+            app()->environment('production')
+            && filter_var(env('VERCEL', false), FILTER_VALIDATE_BOOLEAN)
+        ) {
             URL::forceScheme('https');
         }
 

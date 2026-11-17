@@ -9,13 +9,15 @@ use Tests\TestCase;
 
 class AppServiceProviderTest extends TestCase
 {
-    public function test_https_is_forced_in_production(): void
+    public function test_https_is_forced_in_vercel_production(): void
     {
-        $this->app['env'] = 'production';
+        $this->withVercelEnvironment('1', function (): void {
+            $this->app['env'] = 'production';
 
-        (new AppServiceProvider($this->app))->boot();
+            (new AppServiceProvider($this->app))->boot();
 
-        $this->assertStringStartsWith('https://', url('/'));
+            $this->assertStringStartsWith('https://', url('/'));
+        });
     }
 
     public function test_scheme_is_not_forced_outside_production(): void
@@ -23,6 +25,17 @@ class AppServiceProviderTest extends TestCase
         (new AppServiceProvider($this->app))->boot();
 
         $this->assertStringStartsWith('http://', url('/'));
+    }
+
+    public function test_https_is_not_forced_in_non_vercel_production(): void
+    {
+        $this->withVercelEnvironment(null, function (): void {
+            $this->app['env'] = 'production';
+
+            (new AppServiceProvider($this->app))->boot();
+
+            $this->assertStringStartsWith('http://', url('/'));
+        });
     }
 
     public function test_postgres_connector_leaves_dsn_unchanged_without_endpoint(): void
@@ -65,5 +78,45 @@ class AppServiceProviderTest extends TestCase
             'port' => 5432,
             'charset' => 'utf8',
         ], $overrides));
+    }
+
+    private function withVercelEnvironment(?string $value, callable $callback): void
+    {
+        $hadEnv = array_key_exists('VERCEL', $_ENV);
+        $previousEnv = $_ENV['VERCEL'] ?? null;
+        $hadServer = array_key_exists('VERCEL', $_SERVER);
+        $previousServer = $_SERVER['VERCEL'] ?? null;
+        $previousProcess = getenv('VERCEL');
+
+        if ($value === null) {
+            putenv('VERCEL');
+            unset($_ENV['VERCEL'], $_SERVER['VERCEL']);
+        } else {
+            putenv("VERCEL={$value}");
+            $_ENV['VERCEL'] = $value;
+            $_SERVER['VERCEL'] = $value;
+        }
+
+        try {
+            $callback();
+        } finally {
+            if ($previousProcess === false) {
+                putenv('VERCEL');
+            } else {
+                putenv("VERCEL={$previousProcess}");
+            }
+
+            if ($hadEnv) {
+                $_ENV['VERCEL'] = $previousEnv;
+            } else {
+                unset($_ENV['VERCEL']);
+            }
+
+            if ($hadServer) {
+                $_SERVER['VERCEL'] = $previousServer;
+            } else {
+                unset($_SERVER['VERCEL']);
+            }
+        }
     }
 }

@@ -10,9 +10,9 @@ RUN npm run build
 FROM php:8.4-apache
 
 RUN apt-get update && apt-get install -y \
-    libpq-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev unzip git \
+    libpq-dev libsqlite3-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev unzip git \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
- && docker-php-ext-install pdo_pgsql pgsql zip gd bcmath \
+ && docker-php-ext-install pdo_sqlite pdo_pgsql pgsql zip gd bcmath \
  && a2enmod rewrite \
  && rm -rf /var/lib/apt/lists/*
 
@@ -24,14 +24,18 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
+ENV DB_CONNECTION=sqlite \
+    DB_DATABASE=/var/www/html/storage/database.sqlite
 COPY . .
 COPY --from=assets /app/public/build public/build
 
 # Pasang dependensi (termasuk Faker untuk seeder), siapkan storage, atur izin
 RUN composer install --optimize-autoloader --no-interaction \
  && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
+ && touch storage/database.sqlite \
  && chown -R www-data:www-data storage bootstrap/cache \
- && chmod -R 775 storage bootstrap/cache
+ && chmod -R 775 storage bootstrap/cache \
+ && chmod 664 storage/database.sqlite
 
 EXPOSE 80
 
