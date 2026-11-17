@@ -43,6 +43,14 @@ class AuthTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('Dashboard/Index'));
     }
 
+    public function test_admin_can_open_dashboard(): void
+    {
+        $this->actingAs(User::factory()->admin()->create())
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Dashboard/Index'));
+    }
+
     public function test_login_fails_with_wrong_password(): void
     {
         User::factory()->create(['username' => 'budi', 'password' => 'rahasia']);
