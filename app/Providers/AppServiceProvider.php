@@ -9,7 +9,7 @@ use App\Features\Post\Models\Post;
 use App\Features\Post\Policies\PostPolicy;
 use App\Features\Post\Repositories\PostRepository;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\URL; // TAMBAHAN: Import URL
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,7 +22,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // TAMBAHAN: Paksa HTTPS hanya saat di server production (Render)
         if (app()->environment('production')) {
             URL::forceScheme('https');
         }
