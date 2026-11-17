@@ -39,8 +39,8 @@ RUN composer install --optimize-autoloader --no-interaction \
 
 EXPOSE 80
 
-# Bersihkan cache lama, migrasi, seed, lalu jalankan Apache
-CMD php artisan optimize:clear \
- && php artisan migrate --force \
+# Migrasi sebelum membersihkan cache database, lalu seed dan jalankan Apache
+CMD php artisan migrate --force \
+ && php artisan optimize:clear \
  && php artisan db:seed --force \
  && apache2-foreground
