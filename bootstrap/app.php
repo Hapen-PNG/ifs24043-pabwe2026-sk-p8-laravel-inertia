@@ -30,8 +30,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
     })->create();
 
 $app->useStoragePath('/tmp/storage');
+$app->useBootstrapPath('/tmp/bootstrap');
 
 foreach ([
+    '/tmp/bootstrap/cache',
     '/tmp/storage/app/private',
     '/tmp/storage/app/public',
     '/tmp/storage/framework/cache/data',
